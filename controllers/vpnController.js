@@ -10,18 +10,24 @@ const vpnServers = [
   {
     id: "fra1",
     name: "Germany, Frankfurt",
+    flag: "🇩🇪",
+    authType: "password",
     ip: "46.101.242.165",
     pubKey: "tlswS/GRMm4RviC97BaqodECzn3SkTvtWk81xRUXwUw=",
   },
   {
     id: "ams2",
     name: "Netherlands, Amsterdam",
+    flag: "🇳🇱",
+    authType: "key",
     ip: "164.90.206.205",
     pubKey: "PPq71nQGLkDJvJHcNFzr+AKDAvdlzABPYq8O4Sd9Whc=",
   },
   {
     id: "syd1",
     name: "Australia, Sydney",
+    flag: "🇦🇺",
+    authType: "key",
     ip: "209.38.29.183",
     pubKey: "NV4ts7Kr2vdVK+dYmiM9WEsD7pwOgCrxTKypan/1PEc=",
   },
@@ -140,9 +146,11 @@ async function getVpnConfig(req, res, next) {
 
     const vpnIp = user.vpnIp || (await findAvailableVpnIp());
 
-    await vpnService.connect();
-    const { privateKey, publicKey } = await vpnService.generateClientKeys();
-    await vpnService.addPeer(publicKey, vpnIp, selectedServer.ip);
+    const { privateKey, publicKey } = await vpnService.generateClientKeys(
+      selectedServer.ip,
+      selectedServer.authType,
+    );
+    await vpnService.addPeer(publicKey, vpnIp, selectedServer.ip, selectedServer.authType);
 
     user.vpnIp = vpnIp;
     user.vpnPublicKey = publicKey;
@@ -184,9 +192,23 @@ async function getVpnConfig(req, res, next) {
     return res
       .status(500)
       .json({ success: false, message: err.message, error: err.stack });
-  } finally {
-    vpnService.disconnect();
   }
 }
 
-module.exports = { getVpnConfig, vpnServers };
+/**
+ * GET /api/vpn/servers — возвращает список доступных VPN-локаций без секретных полей.
+ */
+function getAvailableServers(req, res) {
+  const servers = vpnServers.map(({ id, name, flag }) => ({
+    id,
+    name,
+    flag,
+  }));
+
+  return res.status(200).json({
+    success: true,
+    servers,
+  });
+}
+
+module.exports = { getVpnConfig, getAvailableServers, vpnServers };
