@@ -12,6 +12,15 @@ async function connectDB() {
 
   mongoose.set('strictQuery', true);
 
+  mongoose.connection.once('open', async () => {
+    try {
+      await mongoose.connection.db.collection('vpn').dropIndex('vpnIp_1');
+      console.log('✅ Старый кривой индекс vpnIp_1 успешно уничтожен!');
+    } catch (err) {
+      // Игнорируем, если индекса нет
+    }
+  });
+
   await mongoose.connect(uri);
   console.log('MongoDB: подключение установлено');
 }

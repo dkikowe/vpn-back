@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 /**
- * Проверяет заголовок Authorization: Bearer <JWT> и записывает id пользователя в req.userId.
+ * Проверяет заголовок Authorization: Bearer <JWT> и записывает пользователя в req.user.
  */
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
@@ -34,6 +34,7 @@ function authMiddleware(req, res, next) {
         message: 'Некорректный токен',
       });
     }
+    req.user = { id: userId };
     req.userId = userId;
     return next();
   } catch (err) {

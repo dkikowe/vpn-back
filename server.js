@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const vpnRoutes = require('./routes/vpnRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -15,6 +16,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/vpn', vpnRoutes);
 
 app.use(errorHandler);
 

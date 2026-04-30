@@ -18,6 +18,16 @@ const userSchema = new mongoose.Schema(
       minlength: [6, 'Пароль не короче 6 символов'],
       select: false,
     },
+    vpnIp: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    vpnPublicKey: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   {
     timestamps: true,
