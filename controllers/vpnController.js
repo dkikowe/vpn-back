@@ -6,6 +6,8 @@ const VPN_SUBNET_PREFIX = "10.8.0.";
 const VPN_HOST_MIN = 2;
 const VPN_HOST_MAX = 254;
 const SALT_ROUNDS = 10;
+
+// ПРОПИСЫВАЕМ УНИКАЛЬНЫЕ ЗАГОЛОВКИ ДЛЯ КАЖДОГО СЕРВЕРА ЗДЕСЬ
 const vpnServers = [
   {
     id: "fra1",
@@ -14,6 +16,17 @@ const vpnServers = [
     authType: "password",
     ip: "46.101.242.165",
     pubKey: "tlswS/GRMm4RviC97BaqodECzn3SkTvtWk81xRUXwUw=",
+    awgParams: {
+      jc: "3",
+      jmin: "50",
+      jmax: "1000",
+      s1: "113",
+      s2: "120",
+      h1: "8274619",
+      h2: "1928374",
+      h3: "5738291",
+      h4: "9182736",
+    },
   },
   {
     id: "ams2",
@@ -22,6 +35,17 @@ const vpnServers = [
     authType: "key",
     ip: "164.90.206.205",
     pubKey: "PPq71nQGLkDJvJHcNFzr+AKDAvdlzABPYq8O4Sd9Whc=",
+    awgParams: {
+      jc: "3",
+      jmin: "50",
+      jmax: "1000",
+      s1: "113",
+      s2: "120",
+      h1: "1122334",
+      h2: "5566778",
+      h3: "9900112",
+      h4: "3344556",
+    },
   },
   {
     id: "syd1",
@@ -30,6 +54,17 @@ const vpnServers = [
     authType: "key",
     ip: "209.38.29.183",
     pubKey: "NV4ts7Kr2vdVK+dYmiM9WEsD7pwOgCrxTKypan/1PEc=",
+    awgParams: {
+      jc: "3",
+      jmin: "50",
+      jmax: "1000",
+      s1: "113",
+      s2: "120",
+      h1: "7766554",
+      h2: "2233445",
+      h3: "8899001",
+      h4: "4455667",
+    },
   },
 ];
 
@@ -55,7 +90,6 @@ function buildWireGuardConfig(privateKey, vpnIp, serverIp, serverPublicKey) {
     "PersistentKeepalive = 25",
   ];
 
-  // Принудительно формируем Unix-переносы строк, чтобы iOS-парсер видел Endpoint.
   return `${lines.join("\n")}\n`;
 }
 
@@ -71,9 +105,6 @@ function assertWireGuardTemplate(config, serverPublicKey, serverIp) {
   }
 }
 
-/**
- * Выбирает свободный IP в диапазоне 10.8.0.2 - 10.8.0.254.
- */
 async function findAvailableVpnIp() {
   const usersWithIp = await User.find(
     {
@@ -150,7 +181,12 @@ async function getVpnConfig(req, res, next) {
       selectedServer.ip,
       selectedServer.authType,
     );
-    await vpnService.addPeer(publicKey, vpnIp, selectedServer.ip, selectedServer.authType);
+    await vpnService.addPeer(
+      publicKey,
+      vpnIp,
+      selectedServer.ip,
+      selectedServer.authType,
+    );
 
     user.vpnIp = vpnIp;
     user.vpnPublicKey = publicKey;
@@ -163,8 +199,10 @@ async function getVpnConfig(req, res, next) {
       selectedServer.pubKey,
     );
     assertWireGuardTemplate(config, selectedServer.pubKey, selectedServer.ip);
+
     console.log("[✅ УСПЕХ] Конфиг отправлен для IP:", vpnIp);
 
+    // БЕРЕМ ПАРАМЕТРЫ СТРОГО ИЗ НАШЕГО СЕРВЕРА
     return res.status(200).json({
       success: true,
       config: {
@@ -175,15 +213,15 @@ async function getVpnConfig(req, res, next) {
         allowedIPs: ["0.0.0.0/0"],
         address: `${vpnIp}/32`,
         dns: ["8.8.8.8"],
-        jc: "120",
-        jmin: "50",
-        jmax: "1000",
-        s1: "113",
-        s2: "120",
-        h1: "1",
-        h2: "2",
-        h3: "3",
-        h4: "4",
+        jc: selectedServer.awgParams.jc,
+        jmin: selectedServer.awgParams.jmin,
+        jmax: selectedServer.awgParams.jmax,
+        s1: selectedServer.awgParams.s1,
+        s2: selectedServer.awgParams.s2,
+        h1: selectedServer.awgParams.h1,
+        h2: selectedServer.awgParams.h2,
+        h3: selectedServer.awgParams.h3,
+        h4: selectedServer.awgParams.h4,
       },
       rawConfig: config,
     });
@@ -195,9 +233,6 @@ async function getVpnConfig(req, res, next) {
   }
 }
 
-/**
- * GET /api/vpn/servers — возвращает список доступных VPN-локаций без секретных полей.
- */
 function getAvailableServers(req, res) {
   const servers = vpnServers.map(({ id, name, flag }) => ({
     id,
