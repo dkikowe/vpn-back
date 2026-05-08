@@ -1,4 +1,4 @@
-const { randomUUID } = require('crypto');
+const { randomUUID } = require("crypto");
 
 class XuiService {
   constructor(httpClient = fetch) {
@@ -10,13 +10,18 @@ class XuiService {
   #buildBaseUrl() {
     const host = process.env.XUI_HOST;
     const port = process.env.XUI_PORT;
-    const basePath = (process.env.XUI_BASE_PATH || '').replace(/^\/+|\/+$/g, '');
+    const basePath = (process.env.XUI_BASE_PATH || "").replace(
+      /^\/+|\/+$/g,
+      "",
+    );
 
     if (!host || !port || !basePath) {
-      throw new Error('XUI_HOST, XUI_PORT и XUI_BASE_PATH должны быть заданы в .env');
+      throw new Error(
+        "XUI_HOST, XUI_PORT и XUI_BASE_PATH должны быть заданы в .env",
+      );
     }
 
-    return `http://${host}:${port}/${basePath}`;
+    return `https://${host}:${port}/${basePath}`;
   }
 
   #getCredentials() {
@@ -24,17 +29,19 @@ class XuiService {
     const password = process.env.XUI_PASSWORD;
 
     if (!username || !password) {
-      throw new Error('XUI_USERNAME и XUI_PASSWORD должны быть заданы в .env');
+      throw new Error("XUI_USERNAME и XUI_PASSWORD должны быть заданы в .env");
     }
 
     return { username, password };
   }
 
   #assertRealityParams() {
-    const required = ['XUI_PBK', 'XUI_SNI', 'XUI_SID'];
+    const required = ["XUI_PBK", "XUI_SNI", "XUI_SID"];
     const missing = required.filter((key) => !process.env[key]);
     if (missing.length > 0) {
-      throw new Error(`Не заданы параметры Reality в .env: ${missing.join(', ')}`);
+      throw new Error(
+        `Не заданы параметры Reality в .env: ${missing.join(", ")}`,
+      );
     }
   }
 
@@ -63,31 +70,34 @@ class XuiService {
 
     try {
       response = await this.httpClient(`${this.baseUrl}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
     } catch (_err) {
-      throw new Error('Панель 3X-UI недоступна при авторизации');
+      throw new Error("Панель 3X-UI недоступна при авторизации");
     }
 
-    const data = await this.#parseJson(response, 'Не удалось авторизоваться в 3X-UI');
+    const data = await this.#parseJson(
+      response,
+      "Не удалось авторизоваться в 3X-UI",
+    );
 
-    const setCookie = response.headers.get('set-cookie');
+    const setCookie = response.headers.get("set-cookie");
     if (!setCookie) {
-      throw new Error('3X-UI не вернул set-cookie после логина');
+      throw new Error("3X-UI не вернул set-cookie после логина");
     }
 
-    this.cookie = setCookie.split(';')[0];
+    this.cookie = setCookie.split(";")[0];
     return data;
   }
 
   async addClient(inboundId, email) {
     if (!inboundId) {
-      throw new Error('inboundId обязателен');
+      throw new Error("inboundId обязателен");
     }
     if (!email) {
-      throw new Error('email обязателен');
+      throw new Error("email обязателен");
     }
 
     if (!this.cookie) {
@@ -101,14 +111,14 @@ class XuiService {
         clients: [
           {
             id: uuid,
-            flow: 'xtls-rprx-vision',
+            flow: "xtls-rprx-vision",
             email,
             limitIp: 0,
             totalGB: 0,
             expiryTime: 0,
             enable: true,
-            tgId: '',
-            subId: '',
+            tgId: "",
+            subId: "",
           },
         ],
       }),
@@ -116,19 +126,25 @@ class XuiService {
 
     let response;
     try {
-      response = await this.httpClient(`${this.baseUrl}/panel/api/inbounds/addClient`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Cookie: this.cookie,
+      response = await this.httpClient(
+        `${this.baseUrl}/panel/api/inbounds/addClient`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: this.cookie,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
     } catch (_err) {
-      throw new Error('Панель 3X-UI недоступна при добавлении клиента');
+      throw new Error("Панель 3X-UI недоступна при добавлении клиента");
     }
 
-    const data = await this.#parseJson(response, 'Не удалось добавить клиента в 3X-UI');
+    const data = await this.#parseJson(
+      response,
+      "Не удалось добавить клиента в 3X-UI",
+    );
     return { uuid, data };
   }
 
