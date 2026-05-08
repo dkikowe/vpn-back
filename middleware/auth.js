@@ -51,4 +51,50 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = { authMiddleware };
+/**
+ * Если передан валидный Bearer JWT — заполняет req.user; иначе пропускает без ошибки.
+ * Если заголовок есть, но токен невалиден — 401 (как при обычной авторизации).
+ */
+function optionalAuthMiddleware(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = header.slice('Bearer '.length).trim();
+  if (!token) {
+    return next();
+  }
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return next(new Error('JWT_SECRET не задан в .env'));
+  }
+
+  try {
+    const payload = jwt.verify(token, secret);
+    const userId = payload.sub;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Некорректный токен',
+      });
+    }
+    req.user = { id: userId };
+    req.userId = userId;
+    return next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Срок действия токена истёк',
+      });
+    }
+    return res.status(401).json({
+      success: false,
+      message: 'Недействительный токен',
+    });
+  }
+}
+
+module.exports = { authMiddleware, optionalAuthMiddleware };

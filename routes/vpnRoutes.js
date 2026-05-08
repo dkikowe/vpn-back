@@ -1,13 +1,13 @@
 const express = require('express');
 const { getVpnConfig, getAvailableServers } = require('../controllers/vpnController');
 const { getVlessConfig } = require('../controllers/vlessController');
-const { authMiddleware } = require('../middleware/auth');
+const { optionalAuthMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.get('/config', getVpnConfig);
 router.get('/config/:serverId', getVpnConfig);
 router.get('/servers', getAvailableServers);
-router.get('/vless/config', authMiddleware, getVlessConfig);
+router.get('/vless/config', optionalAuthMiddleware, getVlessConfig);
 
 module.exports = router;

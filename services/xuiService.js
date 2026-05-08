@@ -160,6 +160,54 @@ class XuiService {
 
     return `vless://${uuid}@${host}:443?type=tcp&encryption=none&security=reality&pbk=${pbk}&fp=chrome&sni=${sni}&sid=${sid}&spx=%2F#VLESS-${safeEmail}`;
   }
+
+  buildXrayJson(uuid) {
+    const host = process.env.XUI_HOST;
+    const pbk = process.env.XUI_PBK;
+    const sni = process.env.XUI_SNI;
+    const sid = process.env.XUI_SID;
+
+    // Это стандартный формат, который жрет ядро Xray
+    const config = {
+      log: { loglevel: "warning" },
+      inbounds: [
+        {
+          port: 10808,
+          protocol: "tun", // 🟢 Xray сам создаст туннель и заберет трафик iOS
+          settings: { network: "tcp,udp", mtu: 1500 },
+        },
+      ],
+      outbounds: [
+        {
+          protocol: "vless",
+          settings: {
+            vnext: [
+              {
+                address: host,
+                port: 443,
+                users: [
+                  { id: uuid, encryption: "none", flow: "xtls-rprx-vision" },
+                ],
+              },
+            ],
+          },
+          streamSettings: {
+            network: "tcp",
+            security: "reality",
+            realitySettings: {
+              fingerprint: "chrome",
+              serverName: sni,
+              publicKey: pbk,
+              shortId: sid,
+              spiderX: "/",
+            },
+          },
+        },
+      ],
+    };
+
+    return JSON.stringify(config);
+  }
 }
 
 module.exports = { XuiService };
