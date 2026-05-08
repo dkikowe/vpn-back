@@ -173,8 +173,12 @@ class XuiService {
       inbounds: [
         {
           port: 10808,
-          protocol: "tun", // 🟢 Xray сам создаст туннель и заберет трафик iOS
-          settings: { network: "tcp,udp", mtu: 1500 },
+          listen: "127.0.0.1",
+          protocol: "http",
+          sniffing: {
+            enabled: true,
+            destOverride: ["http", "tls"],
+          },
         },
       ],
       outbounds: [
