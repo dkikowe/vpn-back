@@ -169,15 +169,13 @@ class XuiService {
 
     const config = {
       log: { loglevel: "warning" },
-      dns: {
-        servers: ["1.1.1.1", "8.8.8.8"],
-      },
+      dns: { servers: ["1.1.1.1", "8.8.8.8"] },
       inbounds: [
         {
           port: 10808,
-          listen: "127.0.0.1",
-          protocol: "socks", // 🟢 Меняем на socks
-          settings: { udp: true },
+          listen: "127.0.0.1", // Swift подменит это на 198.18.0.1
+          protocol: "http", // 🟢 Возвращаем HTTP
+          settings: { auth: "noauth", udp: true },
         },
       ],
       outbounds: [
