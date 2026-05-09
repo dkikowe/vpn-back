@@ -167,13 +167,16 @@ class XuiService {
     const sni = process.env.XUI_SNI;
     const sid = process.env.XUI_SID;
 
-    // Это стандартный формат, который жрет ядро Xray
     const config = {
       log: { loglevel: "warning" },
+      // 🟢 ДОБАВИЛИ DNS: Теперь Xray не будет бесконечно грузить заблокированные сайты
+      dns: {
+        servers: ["1.1.1.1", "8.8.8.8"],
+      },
       inbounds: [
         {
           port: 10808,
-          listen: "0.0.0.0",
+          listen: "127.0.0.1",
           protocol: "http",
         },
       ],
