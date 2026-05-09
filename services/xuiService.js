@@ -175,10 +175,6 @@ class XuiService {
           port: 10808,
           listen: "127.0.0.1",
           protocol: "http",
-          sniffing: {
-            enabled: true,
-            destOverride: ["http", "tls"],
-          },
         },
       ],
       outbounds: [
