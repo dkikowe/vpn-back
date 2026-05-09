@@ -111,7 +111,7 @@ class XuiService {
         clients: [
           {
             id: uuid,
-            flow: "xtls-rprx-vision",
+            flow: "",
             email,
             limitIp: 0,
             totalGB: 0,
@@ -188,9 +188,7 @@ class XuiService {
               {
                 address: host,
                 port: 443,
-                users: [
-                  { id: uuid, encryption: "none", flow: "xtls-rprx-vision" },
-                ],
+                users: [{ id: uuid, encryption: "none", flow: "" }],
               },
             ],
           },
