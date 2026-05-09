@@ -169,7 +169,6 @@ class XuiService {
 
     const config = {
       log: { loglevel: "warning" },
-      // 🟢 ДОБАВИЛИ DNS: Теперь Xray не будет бесконечно грузить заблокированные сайты
       dns: {
         servers: ["1.1.1.1", "8.8.8.8"],
       },
@@ -177,7 +176,8 @@ class XuiService {
         {
           port: 10808,
           listen: "127.0.0.1",
-          protocol: "http",
+          protocol: "socks", // 🟢 Меняем на socks
+          settings: { udp: true },
         },
       ],
       outbounds: [
@@ -208,7 +208,6 @@ class XuiService {
         },
       ],
     };
-
     return JSON.stringify(config);
   }
 }
