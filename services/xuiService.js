@@ -173,7 +173,7 @@ class XuiService {
       inbounds: [
         {
           port: 10808,
-          listen: "127.0.0.1",
+          listen: "0.0.0.0",
           protocol: "http",
         },
       ],
