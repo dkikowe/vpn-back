@@ -115,7 +115,9 @@ class XuiService {
           port: 10808,
           listen: "127.0.0.1",
           protocol: "http",
-          settings: { auth: "noauth", udp: true },
+          // 🟢 Добавили сниффинг и УБРАЛИ udp: true (из-за него падал Xray)
+          sniffing: { enabled: true, destOverride: ["http", "tls"] },
+          settings: { allowTransparent: false },
         },
       ],
       outbounds: [
