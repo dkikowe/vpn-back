@@ -1,3 +1,4 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Важно для работы с IP через HTTPS
 const { randomUUID } = require("crypto");
 
 class XuiService {
@@ -17,7 +18,7 @@ class XuiService {
 
     if (!host || !port || !basePath) {
       throw new Error(
-        "XUI_HOST, XUI_PORT и XUI_BASE_PATH должны быть заданы в .env",
+        "XUI_HOST, XUI_PORT и XUI_BASE_PATH должны быть заданы в Railway",
       );
     }
 
@@ -25,156 +26,95 @@ class XuiService {
   }
 
   #getCredentials() {
-    const username = process.env.XUI_USERNAME;
-    const password = process.env.XUI_PASSWORD;
-
-    if (!username || !password) {
-      throw new Error("XUI_USERNAME и XUI_PASSWORD должны быть заданы в .env");
-    }
-
-    return { username, password };
-  }
-
-  #assertRealityParams() {
-    const required = ["XUI_PBK", "XUI_SNI", "XUI_SID"];
-    const missing = required.filter((key) => !process.env[key]);
-    if (missing.length > 0) {
-      throw new Error(
-        `Не заданы параметры Reality в .env: ${missing.join(", ")}`,
-      );
-    }
-  }
-
-  async #parseJson(response, defaultMessage) {
-    let body;
-    try {
-      body = await response.json();
-    } catch (_err) {
-      body = null;
-    }
-
-    if (!response.ok) {
-      const message =
-        body?.msg ||
-        body?.message ||
-        `${defaultMessage}. HTTP ${response.status}`;
-      throw new Error(message);
-    }
-
-    return body;
+    return {
+      username: process.env.XUI_USERNAME,
+      password: process.env.XUI_PASSWORD,
+    };
   }
 
   async login() {
     const credentials = this.#getCredentials();
-    let response;
-
     try {
-      response = await this.httpClient(`${this.baseUrl}/login`, {
+      const response = await this.httpClient(`${this.baseUrl}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
-    } catch (_err) {
-      throw new Error("Панель 3X-UI недоступна при авторизации");
+
+      const data = await this.#parseJson(response, "Ошибка авторизации");
+      const setCookie = response.headers.get("set-cookie");
+      if (!setCookie) throw new Error("Куки не получены");
+
+      this.cookie = setCookie.split(";")[0];
+      return data;
+    } catch (err) {
+      console.error("Ошибка логина 3X-UI:", err.message);
+      throw err;
     }
-
-    const data = await this.#parseJson(
-      response,
-      "Не удалось авторизоваться в 3X-UI",
-    );
-
-    const setCookie = response.headers.get("set-cookie");
-    if (!setCookie) {
-      throw new Error("3X-UI не вернул set-cookie после логина");
-    }
-
-    this.cookie = setCookie.split(";")[0];
-    return data;
   }
 
   async addClient(inboundId, email) {
-    if (!inboundId) {
-      throw new Error("inboundId обязателен");
-    }
-    if (!email) {
-      throw new Error("email обязателен");
-    }
-
-    if (!this.cookie) {
-      await this.login();
-    }
+    if (!this.cookie) await this.login();
 
     const uuid = randomUUID();
     const payload = {
       id: inboundId,
       settings: JSON.stringify({
-        clients: [
-          {
-            id: uuid,
-            flow: "xtls-rprx-vision",
-            email,
-            limitIp: 0,
-            totalGB: 0,
-            expiryTime: 0,
-            enable: true,
-            tgId: "",
-            subId: "",
-          },
-        ],
+        clients: [{ id: uuid, flow: "xtls-rprx-vision", email, enable: true }],
       }),
     };
 
-    let response;
-    try {
-      response = await this.httpClient(
-        `${this.baseUrl}/panel/api/inbounds/addClient`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: this.cookie,
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-    } catch (_err) {
-      throw new Error("Панель 3X-UI недоступна при добавлении клиента");
+    const makeReq = () =>
+      this.httpClient(`${this.baseUrl}/panel/api/inbounds/addClient`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Cookie: this.cookie },
+        body: JSON.stringify(payload),
+      });
+
+    let response = await makeReq();
+
+    // Если сессия протухла — обновляем один раз
+    if (response.status === 401 || response.status === 302) {
+      await this.login();
+      response = await makeReq();
     }
 
-    const data = await this.#parseJson(
-      response,
-      "Не удалось добавить клиента в 3X-UI",
-    );
+    const data = await this.#parseJson(response, "Ошибка добавления клиента");
     return { uuid, data };
   }
 
+  async #parseJson(response, defaultMessage) {
+    const text = await response.text();
+    let body;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        body?.msg || `${defaultMessage}. HTTP ${response.status}`,
+      );
+    }
+    return body;
+  }
+
   buildVlessLink(uuid, email) {
-    this.#assertRealityParams();
-
-    const host = process.env.XUI_HOST;
-    const pbk = process.env.XUI_PBK;
-    const sni = process.env.XUI_SNI;
-    const sid = process.env.XUI_SID;
-
-    const safeEmail = encodeURIComponent(email);
-
-    return `vless://${uuid}@${host}:443?type=tcp&encryption=none&security=reality&pbk=${pbk}&fp=chrome&sni=${sni}&sid=${sid}&spx=%2F#VLESS-${safeEmail}`;
+    const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
+    return `vless://${uuid}@${XUI_HOST}:443?type=tcp&encryption=none&security=reality&pbk=${XUI_PBK}&fp=chrome&sni=${XUI_SNI}&sid=${XUI_SID}&spx=%2F#VLESS-${encodeURIComponent(email)}`;
   }
 
   buildXrayJson(uuid) {
-    const host = process.env.XUI_HOST;
-    const pbk = process.env.XUI_PBK;
-    const sni = process.env.XUI_SNI;
-    const sid = process.env.XUI_SID;
-
+    const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
     const config = {
       log: { loglevel: "warning" },
       dns: { servers: ["1.1.1.1", "8.8.8.8"] },
       inbounds: [
         {
           port: 10808,
-          listen: "127.0.0.1", // Swift подменит это на 198.18.0.1
-          protocol: "http", // 🟢 Возвращаем HTTP
+          listen: "127.0.0.1",
+          protocol: "http",
           settings: { auth: "noauth", udp: true },
         },
       ],
@@ -184,7 +124,7 @@ class XuiService {
           settings: {
             vnext: [
               {
-                address: host,
+                address: XUI_HOST,
                 port: 443,
                 users: [
                   { id: uuid, encryption: "none", flow: "xtls-rprx-vision" },
@@ -197,9 +137,9 @@ class XuiService {
             security: "reality",
             realitySettings: {
               fingerprint: "chrome",
-              serverName: sni,
-              publicKey: pbk,
-              shortId: sid,
+              serverName: XUI_SNI,
+              publicKey: XUI_PBK,
+              shortId: XUI_SID,
               spiderX: "/",
             },
           },
@@ -210,4 +150,5 @@ class XuiService {
   }
 }
 
-module.exports = { XuiService };
+// Экспортируем сразу экземпляр (Singleton)
+module.exports = new XuiService();

@@ -1,13 +1,11 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
-const { XuiService } = require("../services/xuiService");
+// Импортируем уже созданный экземпляр сервиса
+const xuiService = require("../services/xuiService");
 
 const DEFAULT_INBOUND_ID = Number(process.env.XUI_INBOUND_ID) || 1;
 const SALT_ROUNDS = 10;
 
-/**
- * С JWT — пользователь из БД; без токена — новый гостевой пользователь (как у WireGuard).
- */
 async function resolveUserForVless(req) {
   const userId = req.user?.id;
   if (userId) {
@@ -31,20 +29,18 @@ async function getVlessConfig(req, res, next) {
   try {
     const user = await resolveUserForVless(req);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Пользователь не найден",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Пользователь не найден" });
     }
 
     if (!user.email) {
-      return res.status(400).json({
-        success: false,
-        message: "У пользователя отсутствует email",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "У пользователя отсутствует email" });
     }
 
-    const xuiService = new XuiService();
+    // ТУТ МЫ БОЛЬШЕ НЕ ПИШЕМ "new XuiService()", объект xuiService уже импортирован сверху
     const { uuid } = await xuiService.addClient(DEFAULT_INBOUND_ID, user.email);
     const vlessUrl = xuiService.buildVlessLink(uuid, user.email);
 
