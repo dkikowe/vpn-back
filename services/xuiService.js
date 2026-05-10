@@ -109,10 +109,22 @@ class XuiService {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
     const config = {
       log: { loglevel: "warning" },
+      // 🟢 ДОБАВЛЯЕМ МАРШРУТИЗАЦИЮ: Блокируем QUIC (UDP 443)
+      routing: {
+        domainStrategy: "AsIs",
+        rules: [
+          {
+            type: "field",
+            network: "udp",
+            port: "443",
+            outboundTag: "block", // Отправляем QUIC в черную дыру
+          },
+        ],
+      },
       inbounds: [
         {
           port: 10808,
-          listen: "127.0.0.1", // Строго 127.0.0.1
+          listen: "127.0.0.1",
           protocol: "http",
           settings: { allowTransparent: false },
         },
@@ -120,6 +132,7 @@ class XuiService {
       outbounds: [
         {
           protocol: "vless",
+          tag: "proxy",
           settings: {
             vnext: [
               {
@@ -142,6 +155,12 @@ class XuiService {
               spiderX: "/",
             },
           },
+        },
+        // 🟢 ДОБАВЛЯЕМ ЧЕРНУЮ ДЫРУ ДЛЯ БЛОКИРОВКИ QUIC
+        {
+          protocol: "blackhole",
+          tag: "block",
+          settings: {},
         },
       ],
     };
