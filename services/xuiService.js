@@ -109,14 +109,11 @@ class XuiService {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
     const config = {
       log: { loglevel: "warning" },
-      dns: { servers: ["1.1.1.1", "8.8.8.8"] },
       inbounds: [
         {
           port: 10808,
-          listen: "127.0.0.1",
+          listen: "127.0.0.1", // Строго 127.0.0.1
           protocol: "http",
-          // 🟢 Добавили сниффинг и УБРАЛИ udp: true (из-за него падал Xray)
-          sniffing: { enabled: true, destOverride: ["http", "tls"] },
           settings: { allowTransparent: false },
         },
       ],
