@@ -125,8 +125,16 @@ class XuiService {
         {
           port: 10808,
           listen: "127.0.0.1",
-          protocol: "http",
-          settings: { allowTransparent: false },
+          protocol: "socks", // 🟢 1. Меняем HTTP на SOCKS
+          settings: {
+            auth: "noauth",
+            udp: true, // 🟢 2. Включаем поддержку UDP (QUIC)
+            ip: "127.0.0.1",
+          },
+          sniffing: {
+            enabled: true,
+            destOverride: ["http", "tls", "quic"], // Позволяет читать домены из пакетов
+          },
         },
       ],
       outbounds: [
