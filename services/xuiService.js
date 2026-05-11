@@ -108,8 +108,9 @@ class XuiService {
   buildXrayJson(uuid) {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
     const config = {
-      log: { loglevel: "warning" },
-      // 🟢 ДОБАВЛЯЕМ МАРШРУТИЗАЦИЮ: Блокируем QUIC (UDP 443)
+      // 🟢 1. ПОЛНОСТЬЮ ОТКЛЮЧАЕМ ЛОГИ (Спасает от краша SIGSEGV на iOS)
+      log: { loglevel: "none" },
+
       routing: {
         domainStrategy: "AsIs",
         rules: [
@@ -117,7 +118,7 @@ class XuiService {
             type: "field",
             network: "udp",
             port: "443",
-            outboundTag: "block", // Отправляем QUIC в черную дыру
+            outboundTag: "block",
           },
         ],
       },
@@ -125,15 +126,16 @@ class XuiService {
         {
           port: 10808,
           listen: "127.0.0.1",
-          protocol: "socks", // 🟢 1. Меняем HTTP на SOCKS
+          protocol: "socks",
           settings: {
             auth: "noauth",
-            udp: true, // 🟢 2. Включаем поддержку UDP (QUIC)
+            udp: true,
             ip: "127.0.0.1",
           },
           sniffing: {
             enabled: true,
-            destOverride: ["http", "tls", "quic"], // Позволяет читать домены из пакетов
+            // 🟢 2. УБИРАЕМ "quic" (Оставляем только стабильные http и tls)
+            destOverride: ["http", "tls"],
           },
         },
       ],
@@ -164,7 +166,6 @@ class XuiService {
             },
           },
         },
-        // 🟢 ДОБАВЛЯЕМ ЧЕРНУЮ ДЫРУ ДЛЯ БЛОКИРОВКИ QUIC
         {
           protocol: "blackhole",
           tag: "block",
