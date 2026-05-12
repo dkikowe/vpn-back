@@ -110,15 +110,21 @@ class XuiService {
     const config = {
       log: { loglevel: "none" },
 
-      // 🟢 1. Включаем внутренний DNS-сервер Xray
+      // 🟢 1. Включаем FakeDNS: телефон будет получать IP мгновенно
       dns: {
-        servers: ["1.1.1.1", "8.8.8.8"],
+        servers: ["fakedns", "1.1.1.1", "8.8.8.8"],
       },
+      fakedns: [
+        {
+          ipPool: "198.18.0.0/15",
+          poolSize: 65535,
+        },
+      ],
 
       routing: {
-        domainStrategy: "AsIs",
+        // 🟢 2. Стратегия IPIfNonMatch обязательна для FakeDNS
+        domainStrategy: "IPIfNonMatch",
         rules: [
-          // 🟢 2. Перехватываем все DNS-запросы из туннеля
           {
             type: "field",
             inboundTag: ["tun-in"],
@@ -126,7 +132,6 @@ class XuiService {
             network: "udp",
             outboundTag: "dns-out",
           },
-          // Блокируем QUIC (чтобы YouTube и Instagram не обходили прокси)
           {
             type: "field",
             network: "udp",
@@ -138,7 +143,7 @@ class XuiService {
 
       inbounds: [
         {
-          tag: "tun-in", // 🟢 3. Даем тег нашему входящему туннелю
+          tag: "tun-in",
           protocol: "tun",
           settings: {
             network: "tcp,udp",
@@ -148,7 +153,9 @@ class XuiService {
           },
           sniffing: {
             enabled: true,
-            destOverride: ["http", "tls"],
+            // 🟢 3. Ловим фейковые IP и превращаем их обратно в реальные домены
+            destOverride: ["fakedns", "http", "tls"],
+            routeOnly: true,
           },
         },
       ],
@@ -180,7 +187,6 @@ class XuiService {
             },
           },
         },
-        // 🟢 4. Специальный канал для обработки перехваченного DNS
         {
           protocol: "dns",
           tag: "dns-out",
