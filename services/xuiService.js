@@ -108,9 +108,7 @@ class XuiService {
   buildXrayJson(uuid) {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
     const config = {
-      // 🟢 1. ПОЛНОСТЬЮ ОТКЛЮЧАЕМ ЛОГИ (Спасает от краша SIGSEGV на iOS)
       log: { loglevel: "none" },
-
       routing: {
         domainStrategy: "AsIs",
         rules: [
@@ -124,11 +122,18 @@ class XuiService {
       },
       inbounds: [
         {
-          port: 10808,
-          listen: "127.0.0.1",
-          protocol: "tun", // 🟢 ВОЛШЕБСТВО ТУТ: Меняем socks на встроенный tun
+          protocol: "tun",
           settings: {
-            network: "tcp,udp", // Xray сам поймет, что делать с трафиком
+            network: "tcp,udp",
+            // 🟢 1. УБИРАЕМ port и listen! TUN работает через файловый дескриптор.
+            // 🟢 2. ДОБАВЛЯЕМ ЖЕСТКИЕ ОГРАНИЧЕНИЯ ДЛЯ iOS:
+            autoRoute: false, // Запрещаем Xray менять маршруты (это делает Swift)
+            system: false, // Говорим Xray использовать наш переданный tunFD
+            mtu: 1350, // Синхронизируем MTU с кодом на Swift
+          },
+          sniffing: {
+            enabled: true,
+            destOverride: ["http", "tls"],
           },
         },
       ],
