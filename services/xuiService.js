@@ -126,16 +126,9 @@ class XuiService {
         {
           port: 10808,
           listen: "127.0.0.1",
-          protocol: "socks",
+          protocol: "tun", // 🟢 ВОЛШЕБСТВО ТУТ: Меняем socks на встроенный tun
           settings: {
-            auth: "noauth",
-            udp: true,
-            ip: "127.0.0.1",
-          },
-          sniffing: {
-            enabled: true,
-            // 🟢 2. УБИРАЕМ "quic" (Оставляем только стабильные http и tls)
-            destOverride: ["http", "tls"],
+            network: "tcp,udp", // Xray сам поймет, что делать с трафиком
           },
         },
       ],
