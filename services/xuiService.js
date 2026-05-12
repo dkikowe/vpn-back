@@ -109,27 +109,42 @@ class XuiService {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
     const config = {
       log: { loglevel: "none" },
+
+      // 🟢 1. Включаем внутренний DNS-сервер Xray
+      dns: {
+        servers: ["1.1.1.1", "8.8.8.8"],
+      },
+
       routing: {
         domainStrategy: "AsIs",
         rules: [
+          // 🟢 2. Перехватываем все DNS-запросы из туннеля
+          {
+            type: "field",
+            inboundTag: ["tun-in"],
+            port: 53,
+            network: "udp",
+            outboundTag: "dns-out",
+          },
+          // Блокируем QUIC (чтобы YouTube и Instagram не обходили прокси)
           {
             type: "field",
             network: "udp",
-            port: "443",
+            port: 443,
             outboundTag: "block",
           },
         ],
       },
+
       inbounds: [
         {
+          tag: "tun-in", // 🟢 3. Даем тег нашему входящему туннелю
           protocol: "tun",
           settings: {
             network: "tcp,udp",
-            // 🟢 1. УБИРАЕМ port и listen! TUN работает через файловый дескриптор.
-            // 🟢 2. ДОБАВЛЯЕМ ЖЕСТКИЕ ОГРАНИЧЕНИЯ ДЛЯ iOS:
-            autoRoute: false, // Запрещаем Xray менять маршруты (это делает Swift)
-            system: false, // Говорим Xray использовать наш переданный tunFD
-            mtu: 1350, // Синхронизируем MTU с кодом на Swift
+            autoRoute: false,
+            system: false,
+            mtu: 1350,
           },
           sniffing: {
             enabled: true,
@@ -137,6 +152,7 @@ class XuiService {
           },
         },
       ],
+
       outbounds: [
         {
           protocol: "vless",
@@ -163,6 +179,11 @@ class XuiService {
               spiderX: "/",
             },
           },
+        },
+        // 🟢 4. Специальный канал для обработки перехваченного DNS
+        {
+          protocol: "dns",
+          tag: "dns-out",
         },
         {
           protocol: "blackhole",
