@@ -146,6 +146,7 @@ class XuiService {
           tag: "tun-in",
           protocol: "tun",
           settings: {
+            name: "utun289",
             network: "tcp,udp",
             autoRoute: false,
             system: false,
