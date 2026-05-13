@@ -143,19 +143,13 @@ class XuiService {
 
       inbounds: [
         {
-          tag: "tun-in",
-          protocol: "tun",
-          settings: {
-            name: "utun289",
-            network: "tcp,udp",
-            autoRoute: false,
-            system: false,
-            mtu: 1350,
-          },
+          tag: "proxy-in",
+          protocol: "http",
+          listen: "127.0.0.1",
+          port: 10808,
           sniffing: {
             enabled: true,
-            // 🟢 3. Ловим фейковые IP и превращаем их обратно в реальные домены
-            destOverride: ["fakedns", "http", "tls"],
+            destOverride: ["http", "tls"],
             routeOnly: true,
           },
         },
