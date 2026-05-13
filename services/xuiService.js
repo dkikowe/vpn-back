@@ -107,40 +107,9 @@ class XuiService {
 
   buildXrayJson(uuid) {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
+
     const config = {
       log: { loglevel: "none" },
-
-      // 🟢 1. Включаем FakeDNS: телефон будет получать IP мгновенно
-      dns: {
-        servers: ["fakedns", "1.1.1.1", "8.8.8.8"],
-      },
-      fakedns: [
-        {
-          ipPool: "198.18.0.0/15",
-          poolSize: 65535,
-        },
-      ],
-
-      routing: {
-        // 🟢 2. Стратегия IPIfNonMatch обязательна для FakeDNS
-        domainStrategy: "IPIfNonMatch",
-        rules: [
-          {
-            type: "field",
-            inboundTag: ["tun-in"],
-            port: 53,
-            network: "udp",
-            outboundTag: "dns-out",
-          },
-          {
-            type: "field",
-            network: "udp",
-            port: 443,
-            outboundTag: "block",
-          },
-        ],
-      },
-
       inbounds: [
         {
           tag: "proxy-in",
@@ -150,11 +119,9 @@ class XuiService {
           sniffing: {
             enabled: true,
             destOverride: ["http", "tls"],
-            routeOnly: true,
           },
         },
       ],
-
       outbounds: [
         {
           protocol: "vless",
@@ -181,15 +148,6 @@ class XuiService {
               spiderX: "/",
             },
           },
-        },
-        {
-          protocol: "dns",
-          tag: "dns-out",
-        },
-        {
-          protocol: "blackhole",
-          tag: "block",
-          settings: {},
         },
       ],
     };
