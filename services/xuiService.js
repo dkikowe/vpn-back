@@ -134,6 +134,7 @@ class XuiService {
         {
           protocol: "vless",
           tag: "proxy",
+          targetStrategy: "UseIPv4",
           settings: {
             vnext: [
               {
@@ -151,6 +152,7 @@ class XuiService {
             realitySettings: {
               fingerprint: "chrome",
               serverName: XUI_SNI,
+              password: XUI_PBK,
               publicKey: XUI_PBK,
               shortId: XUI_SID,
               spiderX: "/",
