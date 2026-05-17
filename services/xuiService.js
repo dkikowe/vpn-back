@@ -110,18 +110,22 @@ class XuiService {
 
     const config = {
       log: { loglevel: "warning" },
+      dns: {
+        servers: ["1.1.1.1", "8.8.8.8"],
+        queryStrategy: "UseIPv4",
+      },
       inbounds: [
         {
           tag: "tun-in",
           protocol: "tun",
           port: 0,
           settings: {
-            name: "utun0",
-            mtu: 1280,
+            name: "utun",
+            userLevel: 0,
           },
           sniffing: {
             enabled: true,
-            destOverride: ["http", "tls", "quic"],
+            destOverride: ["http", "tls"],
           },
         },
       ],
