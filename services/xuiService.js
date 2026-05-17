@@ -120,12 +120,13 @@ class XuiService {
           protocol: "tun",
           port: 0,
           settings: {
+            MTU: 1280,
             name: "utun",
             userLevel: 0,
           },
           sniffing: {
             enabled: true,
-            destOverride: ["http", "tls"],
+            destOverride: ["http", "tls", "quic"],
           },
         },
       ],
@@ -156,10 +157,32 @@ class XuiService {
             },
           },
         },
+        {
+          protocol: "dns",
+          tag: "dns-out",
+        },
+        {
+          protocol: "blackhole",
+          tag: "block",
+        },
       ],
       routing: {
-        domainStrategy: "AsIs",
+        domainStrategy: "IPIfNonMatch",
         rules: [
+          {
+            type: "field",
+            inboundTag: ["tun-in"],
+            network: "tcp,udp",
+            port: 53,
+            outboundTag: "dns-out",
+          },
+          {
+            type: "field",
+            inboundTag: ["tun-in"],
+            network: "udp",
+            port: 443,
+            outboundTag: "block",
+          },
           {
             type: "field",
             inboundTag: ["tun-in"],
