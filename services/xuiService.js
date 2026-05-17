@@ -42,6 +42,7 @@ class XuiService {
       });
 
       const data = await this.#parseJson(response, "Ошибка авторизации");
+      this.#assertPanelSuccess(data, "3X-UI отклонил авторизацию");
       const setCookie = response.headers.get("set-cookie");
       if (!setCookie) throw new Error("Куки не получены");
 
@@ -57,10 +58,18 @@ class XuiService {
     if (!this.cookie) await this.login();
 
     const uuid = randomUUID();
+    const clientEmail = this.#buildClientEmail(email, uuid);
     const payload = {
       id: inboundId,
       settings: JSON.stringify({
-        clients: [{ id: uuid, flow: "xtls-rprx-vision", email, enable: true }],
+        clients: [
+          {
+            id: uuid,
+            flow: "xtls-rprx-vision",
+            email: clientEmail,
+            enable: true,
+          },
+        ],
       }),
     };
 
@@ -80,6 +89,7 @@ class XuiService {
     }
 
     const data = await this.#parseJson(response, "Ошибка добавления клиента");
+    this.#assertPanelSuccess(data, "3X-UI не добавил VLESS-клиента");
     return { uuid, data };
   }
 
@@ -100,16 +110,57 @@ class XuiService {
     return body;
   }
 
+  #assertPanelSuccess(data, defaultMessage) {
+    if (data?.success === false) {
+      throw new Error(data.msg || defaultMessage);
+    }
+  }
+
+  #buildClientEmail(email, uuid) {
+    const safeEmail = String(email || "client").replace(
+      /[^a-zA-Z0-9_.@-]/g,
+      "_",
+    );
+    return `${safeEmail}-${uuid.slice(0, 8)}`;
+  }
+
+  #getVlessPort() {
+    const rawPort =
+      process.env.XUI_VLESS_PORT || process.env.XUI_INBOUND_PORT || "443";
+    const port = Number(rawPort);
+
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new Error("XUI_VLESS_PORT должен быть числом от 1 до 65535");
+    }
+
+    return port;
+  }
+
   buildVlessLink(uuid, email) {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
-    return `vless://${uuid}@${XUI_HOST}:443?type=tcp&encryption=none&security=reality&pbk=${XUI_PBK}&fp=chrome&sni=${XUI_SNI}&sid=${XUI_SID}&spx=%2F#VLESS-${encodeURIComponent(email)}`;
+    const port = this.#getVlessPort();
+    const params = new URLSearchParams({
+      type: "tcp",
+      encryption: "none",
+      security: "reality",
+      pbk: XUI_PBK,
+      fp: "chrome",
+      sni: XUI_SNI,
+      sid: XUI_SID,
+      spx: "/",
+    });
+
+    const label = encodeURIComponent(email);
+    return `vless://${uuid}@${XUI_HOST}:${port}?${params.toString()}#VLESS-${label}`;
   }
 
   buildXrayJson(uuid) {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
+    const port = this.#getVlessPort();
+    const loglevel = process.env.XRAY_LOG_LEVEL || "debug";
 
     const config = {
-      log: { loglevel: "warning" },
+      log: { loglevel },
       dns: {
         servers: ["1.1.1.1", "8.8.8.8"],
         queryStrategy: "UseIPv4",
@@ -139,7 +190,7 @@ class XuiService {
             vnext: [
               {
                 address: XUI_HOST,
-                port: 443,
+                port,
                 users: [
                   { id: uuid, encryption: "none", flow: "xtls-rprx-vision" },
                 ],
