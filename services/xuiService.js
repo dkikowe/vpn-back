@@ -109,16 +109,19 @@ class XuiService {
     const { XUI_HOST, XUI_PBK, XUI_SNI, XUI_SID } = process.env;
 
     const config = {
-      log: { loglevel: "none" },
+      log: { loglevel: "warning" },
       inbounds: [
         {
-          tag: "proxy-in",
-          protocol: "http",
-          listen: "127.0.0.1",
-          port: 10808,
+          tag: "tun-in",
+          protocol: "tun",
+          port: 0,
+          settings: {
+            name: "utun0",
+            mtu: 1280,
+          },
           sniffing: {
             enabled: true,
-            destOverride: ["http", "tls"],
+            destOverride: ["http", "tls", "quic"],
           },
         },
       ],
@@ -150,6 +153,16 @@ class XuiService {
           },
         },
       ],
+      routing: {
+        domainStrategy: "AsIs",
+        rules: [
+          {
+            type: "field",
+            inboundTag: ["tun-in"],
+            outboundTag: "proxy",
+          },
+        ],
+      },
     };
     return JSON.stringify(config);
   }
